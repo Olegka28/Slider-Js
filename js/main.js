@@ -71,7 +71,7 @@ function sliderCreate ({
     const sliderArrowLeft = slider.querySelector('.slider_arrow_left');
 
 
-    document.addEventListener('click', e => {
+    slider.addEventListener('click', e => {
         arrowRightSlider(e),
         arrowLeftSlider(e),
         dotsSlider(e),
