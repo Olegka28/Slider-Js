@@ -14,142 +14,201 @@
 //++ (**) Реализовать возможно бесконечной смены слайдов (если мы дошли до конца слайдера следующий клик на правую стрелочку покажет первый слайд) и тоже самое если нажимаем на левую стрелку когда находимся на первом элементе должны прыгнуть в конец слайдера.
 // (***) Слайдер внутри слайдера должен работать корректно.
 
-createElementDotsAndArrow();
-
-let slideIndex = 1;
-// Для поиск элементов модального окна
-// const closeModal = document.querySelectorAll('.close')[0];
-const modal = document.querySelector('#myModal');
 
 
-// Функция которая создает стрелочки и точки 
-function createElementDotsAndArrow () {
-    const images = document.querySelectorAll(".slider-slides img");
-    const slider = document.querySelector('.slider');
-    let arrowLeft = document.createElement('a');
-    let arrowRight = document.createElement('a');
+function sliderCreate ({
+    mainSlider, 
+    autoPlay = false, 
+    autoPlayTime, 
+    modalka,
+    activeSlide
+}) {
 
-    let dots = document.createElement('div');
-    dots.classList.add('slider-dots');
-    slider.append(dots);
-
-    arrowRight.classList.add('slider-arrow');
-    arrowRight.classList.add('slider-arrow-right');
-    arrowRight.textContent = '>';
-    slider.after(arrowRight);
-
-    arrowLeft.classList.add('slider-arrow');
-    arrowLeft.classList.add('slider-arrow-left');
-    arrowLeft.textContent = '<';
-    slider.before(arrowLeft);
-
-    for (let i = 0; i < images.length; i++){
-        let link = document.createElement('a');
-        link.classList.add('slider-dot');
-        dots.append(link);
-    }
-}
-
-
-showSlides(slideIndex);
-
-// Функция которая показывает слайдер
-function showSlides(number) {
-    const images = document.querySelectorAll(".slider-slides img");
-    const dots = document.querySelectorAll('.slider-dot');
-
-    if (number < 1) {
-        slideIndex = images.length;
-    } 
-    else if (number > images.length) {
-        slideIndex = 1;
-    }
-
-    for (let i = 0; i < images.length; i++) {
-        images[i].classList.add('hide');
-        dots[i].classList.remove('active');
-    }
-
-    images[slideIndex - 1].classList.remove('hide');
-    dots[slideIndex - 1].classList.add('active');
-} 
-
-// Функция которая двигает слайдер
-function moveSlides(number) {
-    showSlides(slideIndex += number);
-}
-
-// Функция для сдвига вправо
-function handleArrowRight (event) { 
-    const slider = event.target.closest('.slider-arrow-right');
-
-    if (slider === null) return;
-
-    moveSlides(1);
-}
-// Функция для сдвига влево
-function handleArrowLeft(event) {
-    const slider = event.target.closest('.slider-arrow-left');
-
-    if (slider === null) return;
-
-    moveSlides(-1);
-}
-
-// Функия для проверки с точками
-function currentSlide(number) {
-    showSlides(slideIndex = number)
-}
-
-// Функция для пагинации
-function handleDotsSlider(event) {
-    const slider = event.target.closest('.slider-dots');
-    const dots = document.querySelectorAll('.slider-dot');
-
-    if (slider === null) return;
-
-    for (let i = 0; i < dots.length + 1; i++) {
-        if (event.target.classList.contains('slider-dot') && event.target === dots[i - 1]) {
-            currentSlide(i);
-        }
-    }
-}
-
-// Функция для открия модалки
-function showModalWindows (event) {
-    const slider = event.target.closest('.slider-slides img');
-    const images = document.querySelectorAll(".slider-slides img");
-    const modalImg = document.querySelector('#modalImg');
-    const captionText = document.querySelector('.caption')
-
-    if (slider === null) return;
-
-    modal.style.display = 'block';
+    const slider = mainSlider;
+    const imgItems = slider.querySelectorAll('.slider_item');
+    const currentImg = imgItems.length;
+    const modal = document.querySelector('.modal');
+    const modalImg = document.querySelector('#modalImg')
+    const captionText = modal.querySelector('.caption');
     
-    for(let i = 0; i < images.length; i++) {
-        if(slideIndex === i + 1) {
-            modalImg.setAttribute('src', images[i].getAttribute('src'));
-            captionText.textContent = images[i].getAttribute('alt');
+
+    let currentSlide = 0;
+    let timerId = null;
+
+    if(autoPlay) {
+        autoPlayTimer();
+    }
+
+    function autoPlayTimer () {
+        if (timerId) {
+            clearInterval(timerId);
+        }
+        timerId = setInterval(() => {
+            slideMove(currentSlide + 1);
+        }, autoPlayTime)
+    }
+    createSliderArrow(slider);
+    createSliderTrack(slider);
+
+    const sliderSlides = slider.querySelector('.slider_slides');
+    const sliderWidth = document.body.clientWidth
+    const trackWidth = sliderWidth * currentImg;
+
+    const dots = slider.querySelector('.slider_dots');
+
+    each(imgItems, (elem, index) => {
+        sliderSlides.append(elem)
+        elem.style.width = sliderWidth + 'px';
+
+        createDots(index);
+    })
+
+    
+
+    sliderSlides.style.width = trackWidth + 'px';
+
+    const sliderArrowRight = slider.querySelector('.slider_arrow_right');
+    const sliderArrowLeft = slider.querySelector('.slider_arrow_left');
+
+
+    document.addEventListener('click', e => {
+        arrowRightSlider(e),
+        arrowLeftSlider(e),
+        dotsSlider(e),
+        modalWindows(e)
+    })
+
+    function dotsSlider(e) {
+        const dotsSlide = e.target.closest('.slider_dot');
+
+        if(dotsSlide == null) return;
+     
+        const dotsTo = Number(dotsSlide.dataset.slideIndex);
+        slideMove(dotsTo);
+    }
+
+    function arrowRightSlider(e) {
+        const arrowRight = e.target.closest('.slider_arrow_right');
+
+        if(arrowRight == null) return;
+
+        const sliderTo = Number(sliderArrowRight.dataset.slideTo);
+        slideMove(currentSlide + sliderTo);
+    }
+
+    function arrowLeftSlider(e) {
+        const arrowLeft = e.target.closest('.slider_arrow_left');
+
+        if(arrowLeft == null) return;
+
+        const sliderTo = Number(sliderArrowLeft.dataset.slideTo);
+        slideMove(currentSlide + sliderTo);
+    }
+
+    function createSliderArrow (slider) {
+        const arrowLeft = document.createElement('a');
+        const arrowRight = document.createElement('a');
+        const sliderDots = document.createElement('div');
+
+        arrowRight.classList.add('slider_arrow');
+        arrowRight.classList.add('slider_arrow_right');
+        arrowRight.setAttribute('data-slide-to', 1);
+        slider.append(arrowRight);
+    
+        arrowLeft.classList.add('slider_arrow');
+        arrowLeft.classList.add('slider_arrow_left');
+        arrowLeft.setAttribute('data-slide-to', -1);
+        slider.append(arrowLeft);
+
+        sliderDots.className = 'slider_dots';
+        slider.append(sliderDots);
+    }
+    
+    function createSliderTrack (slider) {
+        const sliderTrack = document.createElement('div');
+        sliderTrack.className = 'slider_slides';
+        slider.append(sliderTrack);
+    }
+
+    function slideMove (current) {
+        if(current < 0) {
+            current = currentImg - 1;
+        } else if (current >= currentImg) {
+            current = 0;
+        }
+        currentSlide = current;
+    
+        const translate = current * sliderWidth;
+        sliderSlides.style.transform = `translateX(-${translate}px)`;
+        updateActiveElement(currentSlide);
+        autoPlayTimer();
+    }
+
+    function createDots (i) {
+        const dot = document.createElement('a');
+        dot.setAttribute('data-slide-index', i);
+        dot.className = 'slider_dot';
+        
+        if(!i) {
+            dot.classList.add('slider_dot_active');
+            dots.append(dot);
+        }
+        else {
+            dots.append(dot);
+        }
+    }
+
+    function updateActiveElement (active) {
+
+        const dots = slider.querySelector('.slider_dots').children;
+        const imgs = slider.querySelector('.slider_slides').children;
+
+    each(imgs, (elem, index) => {
+        if (index === active) {
+            elem.classList.add('slider_item_active')
+        } 
+        else {
+            elem.classList.remove('slider_item_active')
+        }
+    })
+
+    each(dots, (elem, index) => {
+        if (index === active) {
+            elem.classList.add('slider_dot_active')
+        } 
+        else {
+            elem.classList.remove('slider_dot_active')
+        }
+    })
+}
+
+    function modalWindows (e) {
+        const img = e.target.closest('.slider_item')
+        let activeImg = slider.querySelector('.slider_item_active');
+        if(img === null) return
+
+        modal.style.display = 'block';
+        if(activeImg) {
+            modalImg.setAttribute('src', activeImg.getAttribute('src'));
+            captionText.textContent = activeImg.getAttribute('alt');
         }
     }
 }
 
+const sliders = document.querySelectorAll('.slider');
 
-document.addEventListener('click', event => {
-    handleArrowRight(event);
-    handleArrowLeft(event);
-    handleDotsSlider(event);
-    showModalWindows (event);
-});
+each(sliders, function(slider) {
+    sliderCreate({
+        mainSlider: slider,
+        autoPlay: true,
+        autoPlayTime: 3000,
+        modalka: true,
+    })
+})
 
-// Запуск функции по загрузке страницы и отмена по нажатию
-const intervalId = setInterval(() => moveSlides(1), 4000);
-addEventListener('DOMContentLoaded', () => {
-    intervalId;
-});
-addEventListener('click', () => {
-    clearInterval(intervalId);
-    intervalId;
-});
-
-// setInterval(moveSlides, 4000, 1);
+function each (col, fn) {
+    for(let i = 0; i < col.length; i++) {
+        const arg = col[i]
+        fn(arg, i)
+    }
+}
